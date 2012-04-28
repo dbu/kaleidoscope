@@ -1,4 +1,4 @@
-A set of sketches for (processing.org)[http://processing.org/] to do colorful kaleidoscope images.
+A set of sketches for [processing.org](http://processing.org/) to do colorful kaleidoscope images.
 
 * kaleidoscope_image: kaleidoscope with images. see the doc comment in kaleidoscope_image.pde for the available commands to control the look
 * kaleidoscope_applet: the image kaleidoscope with smaller size and ready to build an applet
@@ -9,9 +9,9 @@ A set of sketches for (processing.org)[http://processing.org/] to do colorful ka
 
 # Credits
 
-* The default pattern for the image kaleidoscope comes from a (painting by my mother, Catherine Buchmann)[http://www.catherinebuchmann.ch/bilder/main.php]
-* This project would have taken a lot more time (or rather, I would never have done it) without the cool (processing.org)[http://processing.org/] framework.
-* I got the initial inspiration from this (article from Matt Booth)[http://www.computerarts.co.uk/tutorials/create-unique-kaleidoscope-graphics] - although the result does not resemble his article much.
+* The default pattern for the image kaleidoscope comes from a [painting by my mother, Catherine Buchmann](http://www.catherinebuchmann.ch/bilder/main.php)
+* This project would have taken a lot more time (or rather, I would never have done it) without the cool [processing.org](http://processing.org/) framework.
+* I got the initial inspiration from this [article from Matt Booth](http://www.computerarts.co.uk/tutorials/create-unique-kaleidoscope-graphics) - although the result does not resemble his article much.
 
 
 # License

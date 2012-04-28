@@ -1,0 +1,8 @@
+.svn
+kaleidoscope_image/*.png
+kaleidoscope_image/kaleidoscope-linux/
+kaleidoscope_image/kaleidoscope-macosx/
+kaleidoscope_image/kaleidoscope-windows/
+kaleidoscope_applet/applet/
+kaleidoscope_camera/*.png
+kaleidoscope_camera/application.linux/

@@ -35,7 +35,7 @@ public static final int radius = 230;
 /** show debug messages */
 public static final boolean DEBUG = false;
 
-private KaleidoscopeController controller;
+private KeyboardController controller;
 
 /**
  * prepare the sketch
@@ -44,7 +44,7 @@ void setup() {
     size(radius*2,radius*2,JAVA2D);
     frameRate(30);
 
-    controller = new KaleidoscopeController(radius, 1, false, DEBUG);
+    controller = new KeyboardController(radius, 1, false, DEBUG);
 
     //load the bundled image
     PImage i = loadImage("pattern.jpg");
@@ -60,7 +60,7 @@ void draw() {
 }
 
 /**
- * forward mouse movement to KaleidoscopeController
+ * forward mouse movement to KeyboardController
  */
 public void mouseDragged() {
     controller.mouseDragged();

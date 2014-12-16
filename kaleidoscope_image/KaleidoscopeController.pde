@@ -1,3 +1,7 @@
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Picture Kaleidoscope
  * by David Buchmann <mail at davidbu.ch>
@@ -6,6 +10,8 @@
  *
  * Forward the draw, mouseDragged and keyReleased events to this class
  * Update the current image with the changeImage method.
+ *
+ * For use with asynchronous inputs like tuio, we need to synchronize most of the methods. 
  *
  * (c) David Buchmann, 2010
  *
@@ -16,18 +22,16 @@
  * See the GNU General Public License for more details.
  */
 class KaleidoscopeController {
-
-    /** whether s key is handled or ignored */
-    private boolean canSave;
-
     /** show debug messages */
     private boolean DEBUG;
+    
+    private boolean snapshot = false, pushed = false; 
 
     /** control the amount 'r' and 'R' change the rotation speed */
     private static final float ROTATE_INCREMENT = 0.005;
 
     /** factor to scale kaleidoscope to save high resolution */
-    private int scalefactor = 1; // > 1 won't work in full screen mode
+    private int scalefactor; // > 1 won't work in full screen mode
 
     /** radius of a circle fitting onto the screen */
     private int screenradius;
@@ -68,13 +72,11 @@ class KaleidoscopeController {
      *
      * @param screenradius the radius of the kaleidoscope on screen
      * @param scalefactor to scale the snapshots to higher resolution
-     * @param canSave whether the s key is used to save a snapshot or ignored
      * @param debug whether to show debug information
      */
-    public KaleidoscopeController(int screenradius, int scalefactor, boolean canSave, boolean debug) {
+    public KaleidoscopeController(int screenradius, int scalefactor, boolean debug) {
         this.screenradius = screenradius;
         this.scalefactor = scalefactor;
-        this.canSave = canSave;
         this.DEBUG = debug;
 
         kaleidoscope = new Kaleidoscope(16, screenradius);
@@ -89,12 +91,22 @@ class KaleidoscopeController {
     }
 
     /**
+     * Get kaleidoscope buffer to draw directly into it
+     */
+    public synchronized PGraphics getBuffer() {
+      return kaleidoscope.getBuffer();
+    }
+    public Kaleidoscope getKaleidoscope() {
+      return kaleidoscope;
+    }
+
+    /**
      * change the image to a new one
      *
      * @param i the new imagethe file to load
      * @param name the image name to use when storing snapshots
      */
-    public void changeImage(PImage i, String name, boolean reset) {
+    public synchronized void changeImage(PImage i, String name, boolean reset) {
         try {
             img = (PImage) i.clone();
             img.resize(Math.round(screenradius*1.5),0);
@@ -125,7 +137,10 @@ class KaleidoscopeController {
     /**
      * draw loop
      */
-    public void draw() {
+    public synchronized void draw() {
+        if (snapshot) return;
+        pushMatrix();
+        pushed = true;
         background(0);
         if (DEBUG) {
             float t = millis();
@@ -144,9 +159,11 @@ class KaleidoscopeController {
             lastDrag.y = drag.y;
             lastDrag.z = drag.z;
         }
-
+    
         //center the screen
-        translate((width - height)/2,0);
+        int shiftx = (width - height)/2;
+        if (scalefactor > 1) shiftx += (displayWidth-displayHeight)/2;
+        translate(shiftx,0);
         baserotate += rotateKal;
         baserotate %=  TWO_PI;
         kaleidoscope.draw(graph,baserotate);
@@ -158,15 +175,11 @@ class KaleidoscopeController {
             fill(0);
             text("fps "+Math.round(frameRate), 15, 30);
         }
+        if (! snapshot) popMatrix();
+        pushed = false;
     }
 
-    /**
-     * track mouse movement to update image position
-     */
-    public void mouseDragged() {
-        if (mouseButton == LEFT) {
-            int dx = mouseX - pmouseX;
-            int dy = mouseY - pmouseY;
+    public synchronized void move(int dx, int dy) {
             lastd.x = dx * 0.1 + lastd.x * 0.9;
             lastd.y = dy * 0.1 + lastd.y * 0.9;
             drag.x += lastd.x;
@@ -174,48 +187,26 @@ class KaleidoscopeController {
             if (drag.x > graph.width) drag.x = graph.width;
             if (drag.x < -img.width) drag.x = -img.width;
             if (drag.y > graph.height) drag.y = graph.height;
-            if (drag.y < -img.height) drag.y = -img.height;
-        } else if (mouseButton == RIGHT) {
-            drag.z += (mouseX - pmouseX) * 0.01;
-        }
+            if (drag.y < -img.height) drag.y = -img.height;      
     }
 
-    /**
-     * handle key strokes (numbers, r, R, save if canSave)
-     */
-    public void keyReleased() {
-        switch(key) {
-            case '0':
-            case '1':
-            case '2':
-                changeKaleidoscope((Integer.parseInt(key+"")+10)*2);
-                break;
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                changeKaleidoscope(Integer.parseInt(key+"")*2);
-                break;
-            case 'r':
-                rotateKal += ROTATE_INCREMENT;
-                break;
-            case 'R':
-                rotateKal -= ROTATE_INCREMENT;
-                break;
-            case 's':
-                if (canSave) {
-                    saveSnapshot();
-                }
-                break;
-            default:
-                //unknown key
-                break;
-        }
+    /** increment the rotation by r */
+    public synchronized void rotateIncrement(float r) {
+      drag.z += r;
     }
 
+    /** set the rotation to r */
+    public synchronized void rotate(float r) {
+      drag.z = r;
+    }
+    
+    /** set position from -1 to 1 */
+    public synchronized void setPositionFraction(float x, float y) {
+        if (x < -1 || x > 1 || y < -1 || y > 1) return;
+        drag.x = graph.width * x;
+        drag.y = graph.height * y;
+    }
+    
     /**
      * update the buffer with the image in current position,
      *
@@ -224,7 +215,7 @@ class KaleidoscopeController {
      * @param i the image to draw onto the buffer
      * @param m scaling factor relative to the screenradius
      */
-    private void updateGraph(PGraphics graph, PImage i, int m) {
+    private synchronized void updateGraph(PGraphics graph, PImage i, int m) {
         graph.beginDraw();
         graph.translate(drag.x*m,drag.y*m);
         graph.translate(m*screenradius/2,m*screenradius/2);
@@ -234,14 +225,21 @@ class KaleidoscopeController {
         graph.endDraw();
     }
 
+    public void increaseRotate() {
+        rotateKal += ROTATE_INCREMENT;      
+    }
+    public void decreaseRotate() {
+        rotateKal -= ROTATE_INCREMENT;
+    }
+
     /**
-     * Change the number of axis of the kaleidoscope (after a number key pressed)
+     * Change the number of axis of the kaleidoscope
      *
      * Will create a new Kaleidoscope instance and a new buffer for the slice of pie
      *
      * @param segments the number of segments to use
      */
-    private void changeKaleidoscope(int segments) {
+    public synchronized void setSegmentNumber(int segments) {
         PGraphics oldg = graph;
         kaleidoscope = new Kaleidoscope(segments, screenradius);
         graph = kaleidoscope.getBuffer();
@@ -266,7 +264,9 @@ class KaleidoscopeController {
      * If scalefactor is more than 1, the kaleidoscopeH is drawn and saved instead
      * of the current screen.
      */
-    private void saveSnapshot() {
+    public synchronized void saveSnapshot() {
+        snapshot = true;
+        if (pushed) popMatrix();
         if (scalefactor != 1)  {
             background(0);
             //center the screen
@@ -277,10 +277,11 @@ class KaleidoscopeController {
         DateFormat f = new SimpleDateFormat("'kaleidoscope_"+imagename+"_'yyyy-MM-dd_HH-mm-ss'.png'");
         String imgfile = f.format(new Date());
         try {
-            save(imgfile);
+            save("/home/david/" + imgfile);
         } catch(RuntimeException t) {
             t.printStackTrace();
             println("Failed to save current state to "+imgfile);
         }
+        snapshot = false;
     }
 }

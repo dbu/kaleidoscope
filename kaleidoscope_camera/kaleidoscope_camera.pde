@@ -40,32 +40,25 @@ int fps = 30;
 /** limit radius on large screen */
 int maxradius = vidwidth + vidwidth/2;
 
-KaleidoscopeController controller;
+KeyboardController controller;
 
 /** statistics/debug */
 float now=0, t=0; int imgcount=0, noimgcount=0;
 
 /**
- * start application
- */
-static public void main(String args[]) {
-  PApplet.main(new String[] { "--present", "kaleidoscope_camera" });
-}
-
-/**
  * prepare the sketch
  */
 void setup() {
-    size(screen.width, screen.height, OPENGL);
+    size(displayWidth, displayHeight, OPENGL);
     smooth();//default for opengl anyways
     frameRate(30);
 
-    int radius = min(maxradius, screen.height/2);
+    int radius = min(maxradius, displayHeight/2);
 
     // Uses the default video input, suitable for ps3 eye cam and also my laptops in-built web cam. see the reference if this causes an error
     video = new GSPipeline(this, "v4l2src name=video_source device=/dev/video0 ! video/x-raw-yuv,width="+vidwidth+",height="+vidheight+",framerate="+fps+"/1 ! identity");
 
-    controller = new KaleidoscopeController(radius, 1, true, DEBUG);
+    controller = new KeyboardController(radius, 1, true, DEBUG);
 
     //init image until we get first camera picture
     controller.changeImage(createImage(1,1,RGB), "dummy", false);
